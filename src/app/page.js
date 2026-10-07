@@ -17,6 +17,7 @@ import {
   query,
   setDoc,
   updateDoc,
+  writeBatch,
 } from "firebase/firestore";
 import {
   deleteObject,
@@ -48,6 +49,7 @@ export default function Home() {
   const [cvInput, setCvInput] = useState("");
   const [status, setStatus] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isReordering, setIsReordering] = useState(false);
 
   useEffect(
     () =>
@@ -302,6 +304,50 @@ export default function Home() {
     }
   }
 
+  async function handleMoveProject(id, direction) {
+    const currentIndex = projects.findIndex((item) => item.id === id);
+    const nextIndex = currentIndex + direction;
+    if (
+      isReordering ||
+      currentIndex < 0 ||
+      nextIndex < 0 ||
+      nextIndex >= projects.length
+    ) {
+      return;
+    }
+
+    const reorderedProjects = [...projects];
+    [reorderedProjects[currentIndex], reorderedProjects[nextIndex]] = [
+      reorderedProjects[nextIndex],
+      reorderedProjects[currentIndex],
+    ];
+
+    setIsReordering(true);
+    setStatus("Updating project order...");
+    try {
+      const batch = writeBatch(db);
+      const updatedAt = Date.now();
+      reorderedProjects.forEach((item, index) => {
+        batch.update(doc(db, "projects", item.id), {
+          order: index,
+          updatedAt,
+        });
+      });
+      await batch.commit();
+      setProjects(
+        reorderedProjects.map((item, index) => ({ ...item, order: index })),
+      );
+      setStatus("Project order updated.");
+    } catch (error) {
+      console.error("Unable to reorder projects:", error);
+      setStatus(
+        "Project order could not be updated. Check Firestore rules and admin UID.",
+      );
+    } finally {
+      setIsReordering(false);
+    }
+  }
+
   if (loading)
     return (
       <main className="shell">
@@ -507,7 +553,7 @@ export default function Home() {
           <p className="eyebrow">LIBRARY</p>
           <h2>Projects</h2>
           <div className="project-list">
-            {projects.map((item) => (
+            {projects.map((item, index) => (
               <article key={item.id}>
                 <div>
                   <strong>{item.title}</strong>
@@ -517,7 +563,30 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="actions">
+                  <div className="reorder-actions">
+                    <button
+                      type="button"
+                      className="secondary reorder-button"
+                      aria-label={`Move ${item.title} up`}
+                      title="Move up"
+                      disabled={isReordering || index === 0}
+                      onClick={() => handleMoveProject(item.id, -1)}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary reorder-button"
+                      aria-label={`Move ${item.title} down`}
+                      title="Move down"
+                      disabled={isReordering || index === projects.length - 1}
+                      onClick={() => handleMoveProject(item.id, 1)}
+                    >
+                      ↓
+                    </button>
+                  </div>
                   <button
+                    type="button"
                     className="secondary"
                     onClick={() => {
                       setProject(item);
@@ -527,6 +596,7 @@ export default function Home() {
                     Edit
                   </button>
                   <button
+                    type="button"
                     className="danger"
                     onClick={() => handleDelete(item.id)}
                   >

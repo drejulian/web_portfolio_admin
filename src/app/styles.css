@@ -32,6 +32,9 @@ button:hover, .upload-button:hover { opacity: .85; }
 .project-list article { display: flex; justify-content: space-between; align-items: center; gap: 16px; border-bottom: 1px solid var(--line); padding: 16px 0; }
 .project-list article p { margin: 6px 0 0; font: 12px Arial, sans-serif; }
 .actions { display: flex; gap: 8px; }
+.reorder-actions { display: flex; gap: 4px; }
+.actions .reorder-button { min-width: 32px; padding: 8px; font-size: 14px; }
+.actions button:disabled { cursor: not-allowed; opacity: .4; }
 .actions button { padding: 8px 12px; font: 12px Arial, sans-serif; }
 @media (max-width: 800px) { .content-grid, .cv-panel { grid-template-columns: 1fr; display: grid; } header { align-items: start; gap: 20px; } .login section { padding: 28px; } }
 .progress-container { width: 100%; margin-top: 16px; }
